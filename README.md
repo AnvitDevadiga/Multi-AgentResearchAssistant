@@ -1,20 +1,18 @@
 <div align="center">
 
-# 🔬 Multi-Agent Research Assistant
+# Multi-Agent Research Assistant
 
-### *LangGraph-Powered Autonomous Research Pipeline*
+### LangGraph-powered autonomous research with source validation
 
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![LangGraph](https://img.shields.io/badge/LangGraph-Agents-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white)
+![LangGraph](https://img.shields.io/badge/LangGraph-4_Agents-1C3C3C?style=for-the-badge&logo=chainlink&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-REST_API-009688?style=for-the-badge&logo=fastapi&logoColor=white)
 ![Groq](https://img.shields.io/badge/Groq-Llama_3-F54E27?style=for-the-badge)
-![Render](https://img.shields.io/badge/Render-Live_Deploy-46E3B7?style=for-the-badge&logo=render&logoColor=black)
+![Streamlit](https://img.shields.io/badge/Streamlit-UI-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)
 
 <br/>
 
-> **4 Specialized Agents · Fact-Checked Output · Live REST API**
->
-> *Type a research query. Watch 4 agents collaborate, cross-check, and compile a structured report — autonomously.*
+> **4 specialized agents · Web search · Confidence scoring · Structured JSON + Markdown reports**
 
 <br/>
 
@@ -22,55 +20,46 @@
 
 </div>
 
-## 🧠 What is this?
+## Highlights
 
-A production-deployed **multi-agent research system** where specialized AI agents collaborate in a LangGraph state machine to autonomously research any topic. Unlike a simple RAG pipeline, this system uses a **Critic agent** to cross-check contradictions between sources — going beyond retrieval to genuine multi-step reasoning.
-
-Built with **zero paid API cost** using Groq's free tier and DuckDuckGo search.
+| Capability | Implementation |
+|---|---|
+| **Multi-agent orchestration** | 4-agent LangGraph workflow (Search → Summarize → Critic → Report) |
+| **Factual reliability** | Critic agent cross-checks sources, flags contradictions, scores claim confidence |
+| **Production API** | FastAPI endpoint with structured JSON outputs for downstream apps |
+| **Interactive demo** | Streamlit UI with live agent progress, tabs, and report download |
+| **Cost-efficient stack** | Groq free tier + DuckDuckGo search (no paid search API required) |
 
 <br/>
 
 ---
 
-## ⚡ Architecture
+## Architecture
 
 ![Architecture](multi_agent_research_architecture.svg)
+
+Each agent is a LangGraph node sharing typed state. The pipeline runs sequentially: retrieve sources, extract facts, validate claims, then compile a markdown report.
+
 <br/>
 
 ---
 
-## 🤖 The 4 Agents
+## The 4 Agents
 
 | Agent | Role | Output |
 |---|---|---|
-| 🔍 **Search Agent** | Queries DuckDuckGo, retrieves top 5 sources | URLs + content summaries |
-| 📝 **Summarizer Agent** | Extracts key facts from each source | Structured summaries per source |
-| ⚖️ **Critic Agent** | Cross-checks claims, flags contradictions, assigns confidence | Contradiction report + confidence scores |
-| 📋 **Report Agent** | Compiles verified summaries into final markdown | Structured research report |
+| **Search** | Queries DuckDuckGo, fetches page content | Top 5 URLs + text snippets |
+| **Summarizer** | Extracts key facts from each source | Structured per-source summaries |
+| **Critic** | Cross-checks claims across sources | Contradictions + confidence assessments |
+| **Report** | Synthesizes verified material | Final markdown research report |
 
 <br/>
 
 ---
 
-## 🛠️ Tech Stack
+## Quick Start
 
-| Layer | Technology | Purpose |
-|---|---|---|
-| **Orchestration** | LangGraph | Agent state machine + routing |
-| **Agents** | LangChain | Agent logic + tool use |
-| **LLM** | Groq · Llama 3 | Intelligence layer (free tier) |
-| **Search** | DuckDuckGo | Zero-cost web search |
-| **API** | FastAPI + Uvicorn | REST endpoint serving |
-| **Frontend** | Streamlit | Live agent progress UI |
-| **Deployment** | Render.com | Free tier cloud hosting |
-
-<br/>
-
----
-
-## 🚀 Quick Start
-
-### 1. Clone & Setup
+### 1. Clone and install
 
 ```bash
 git clone https://github.com/AnvitDevadiga/research-assistant.git
@@ -80,23 +69,28 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
-### 2. Configure Environment
+### 2. Configure environment
 
 ```bash
 cp .env.example .env
-# Add your GROQ_API_KEY from console.groq.com (free)
+# Add GROQ_API_KEY from https://console.groq.com (free tier)
 ```
 
-### 3. Run Streamlit UI
+### 3. Launch Streamlit UI (recommended for demos)
 
 ```bash
 streamlit run streamlit_app.py
 ```
 
-### 4. Or use the REST API
+Open `http://localhost:8501` — enter a query, watch the 4-agent pipeline progress, and explore results in tabs (Report · Sources · Validation · Raw JSON).
+
+### 4. Or run the REST API
 
 ```bash
 uvicorn app.api:app --reload
+```
+
+```bash
 curl -X POST http://localhost:8000/research \
   -H "Content-Type: application/json" \
   -d '{"query": "latest trends in AI agents"}'
@@ -106,9 +100,11 @@ curl -X POST http://localhost:8000/research \
 
 ---
 
-## 📡 API Reference
+## API Reference
 
 **POST** `/research`
+
+**Request:**
 
 ```json
 {
@@ -120,73 +116,54 @@ curl -X POST http://localhost:8000/research \
 
 ```json
 {
-  "overview": "...",
-  "key_findings": ["...", "..."],
-  "contradictions": ["..."],
-  "sources": ["https://...", "https://..."],
-  "confidence": "HIGH"
+  "query": "latest trends in AI agents",
+  "report": "## Overview\n...",
+  "overview": "Short summary extracted from the report",
+  "key_findings": ["Finding 1", "Finding 2"],
+  "contradictions": ["Source A says X; Source B says Y"],
+  "assessments": [
+    {
+      "claim": "LangGraph adoption grew in 2026",
+      "confidence": "high",
+      "notes": "Supported by multiple sources"
+    }
+  ],
+  "sources": [
+    {
+      "url": "https://example.com",
+      "title": "Example Article",
+      "summary": "Brief summary of the source"
+    }
+  ],
+  "confidence": "HIGH",
+  "source_count": 5,
+  "errors": [],
+  "current_agent": "report"
 }
 ```
 
-<br/>
-
----
-
-## 🧪 Example Output
-
-**Query:** `"Latest trends in AI agents 2026"`
-
-```
-✅ 1. Search (DuckDuckGo)    — 5 sources retrieved
-✅ 2. Summarizer             — Key facts extracted
-✅ 3. Critic                 — 2 contradictions flagged
-✅ 4. Report                 — Final report compiled
-
-## Overview
-AI agents in 2026 are characterized by...
-
-## Key Findings
-- Multi-agent orchestration frameworks saw 3x adoption growth
-- LangGraph emerged as the dominant state machine approach...
-
-## Contradictions Found
-- Source A claims X; Source B disputes this with Y...
-
-## Sources
-- https://...
-```
+Interactive docs: `http://localhost:8000/docs`
 
 <br/>
 
 ---
 
-## 🌐 Live Demo
-
-Deployed at: **[research-assistant.onrender.com](https://research-assistant-k824.onrender.com)**
-
-> Note: Free tier spins down after 15 min inactivity. First request may take ~30 seconds to wake up.
-
-<br/>
-
----
-
-## 📂 Project Structure
+## Project Structure
 
 ```
-research-assistant/
-│
+Multi-AgentResearchAssistant/
 ├── app/
 │   ├── agents/
 │   │   ├── search_agent.py       # DuckDuckGo search + content fetch
 │   │   ├── summarizer_agent.py   # LLM-powered summarization
-│   │   ├── critic_agent.py       # Contradiction detection
+│   │   ├── critic_agent.py       # Contradiction detection + confidence
 │   │   └── report_agent.py       # Final report compilation
 │   ├── graph.py                  # LangGraph state machine
 │   ├── api.py                    # FastAPI REST endpoints
+│   ├── structured_output.py      # Structured JSON from pipeline state
 │   ├── llm.py                    # Groq LLM configuration
 │   └── state.py                  # Shared agent state schema
-│
-├── streamlit_app.py              # Streamlit frontend
+├── streamlit_app.py              # Interactive demo UI
 ├── requirements.txt
 ├── Procfile                      # Render.com deployment
 └── .env.example
@@ -196,13 +173,23 @@ research-assistant/
 
 ---
 
-## 🔭 Roadmap
+## Live Demo
 
-- [ ] Streaming SSE endpoint for real-time agent progress
-- [ ] Memory layer — persist research sessions
-- [ ] PDF export of final reports
-- [ ] Docker deployment
-- [ ] Agent performance benchmarking
+Deployed API: **[research-assistant-k824.onrender.com](https://research-assistant-k824.onrender.com)**
+
+> Free tier may sleep after inactivity. First request can take ~30s to wake up.
+
+<br/>
+
+---
+
+## Skills Demonstrated
+
+- **Agentic AI:** Multi-step LangGraph workflows with typed shared state
+- **LLM engineering:** Structured JSON extraction, fallbacks, prompt design per agent role
+- **Backend:** FastAPI REST API with Pydantic models and CORS
+- **Frontend:** Streamlit dashboard with live progress and export
+- **DevOps:** Render deployment via Procfile
 
 <br/>
 
@@ -211,8 +198,6 @@ research-assistant/
 <div align="center">
 
 **Built by [Anvit Devadiga](https://github.com/AnvitDevadiga)**
-
-*AI Engineer · Multi-Agent Systems · Production Deployment*
 
 [![GitHub](https://img.shields.io/badge/GitHub-AnvitDevadiga-181717?style=for-the-badge&logo=github)](https://github.com/AnvitDevadiga)
 [![Email](https://img.shields.io/badge/Email-anvitdevadiga@outlook.com-0078D4?style=for-the-badge&logo=microsoftoutlook&logoColor=white)](mailto:anvitdevadiga@outlook.com)

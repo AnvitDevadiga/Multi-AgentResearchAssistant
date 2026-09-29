@@ -1,15 +1,16 @@
-"""FastAPI application: POST /research."""
+"""FastAPI application: POST /research and GET /research/stream."""
 from __future__ import annotations
 
 import os
+import json
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, StreamingResponse
 from pydantic import BaseModel, Field
 
-from app.graph import run_research
+from app.graph import run_research, get_compiled_graph, initial_state
 from app.structured_output import structured_from_state
 
 load_dotenv()
@@ -133,7 +134,7 @@ def create_app() -> FastAPI:
                 </div>
                 <div class="badges">
                     <span class="badge">LangGraph</span>
-                    <span class="badge">Groq · Llama 3</span>
+                    <span class="badge">Google Gemini</span>
                     <span class="badge">DuckDuckGo</span>
                     <span class="badge">FastAPI</span>
                 </div>
@@ -148,10 +149,10 @@ def create_app() -> FastAPI:
 
     @app.post("/research", response_model=ResearchResponse)
     def research(req: ResearchRequest):
-        if not os.environ.get("GROQ_API_KEY"):
+        if not os.environ.get("GOOGLE_API_KEY"):
             raise HTTPException(
                 status_code=503,
-                detail="GROQ_API_KEY is not configured on the server.",
+                detail="GOOGLE_API_KEY is not configured on the server.",
             )
         q = req.query.strip()
         if not q:
@@ -160,118 +161,38 @@ def create_app() -> FastAPI:
         structured = structured_from_state(out)
         return ResearchResponse(
             query=q,
-            report=structured["report"],
-            overview=structured["overview"],
-            key_findings=structured["key_findings"],
-            contradictions=structured["contradictions"],
-            assessments=structured["assessments"],
-            sources=structured["sources"],
-            confidence=structured["confidence"],
-            source_count=structured["source_count"],
+            report=structured.get("report", ""),
+            overview=structured.get("overview", ""),
+            key_findings=structured.get("key_findings", []),
+            contradictions=structured.get("contradictions", []),
+            assessments=structured.get("assessments", []),
+            sources=structured.get("sources", []),
+            confidence=structured.get("confidence", "MEDIUM"),
+            source_count=structured.get("source_count", 0),
             errors=list(out.get("errors") or []),
             current_agent=str(out.get("current_agent") or ""),
         )
 
-    return app
-
-
-app = create_app()
-    def root():
-        return """
-        <html>
-            <head>
-                <title>Multi-Agent Research Assistant</title>
-                <style>
-                    * { margin: 0; padding: 0; box-sizing: border-box; }
-                    body {
-                        font-family: Arial, sans-serif;
-                        background: #0f0f0f;
-                        color: #fff;
-                        display: flex;
-                        justify-content: center;
-                        align-items: center;
-                        height: 100vh;
-                        flex-direction: column;
-                        gap: 16px;
-                    }
-                    h1 { color: #00ff88; font-size: 2rem; text-align: center; }
-                    p { color: #aaa; font-size: 1rem; text-align: center; }
-                    .pipeline {
-                        background: #1a1a1a;
-                        border: 1px solid #333;
-                        padding: 12px 24px;
-                        border-radius: 10px;
-                        color: #00ff88;
-                        font-size: 0.9rem;
-                        letter-spacing: 1px;
-                    }
-                    .badges {
-                        display: flex;
-                        gap: 10px;
-                        flex-wrap: wrap;
-                        justify-content: center;
-                    }
-                    .badge {
-                        background: #1a1a1a;
-                        border: 1px solid #444;
-                        padding: 6px 14px;
-                        border-radius: 20px;
-                        font-size: 0.8rem;
-                        color: #ccc;
-                    }
-                    .btn {
-                        background: #00ff88;
-                        color: #000;
-                        padding: 14px 32px;
-                        border-radius: 8px;
-                        text-decoration: none;
-                        font-weight: bold;
-                        font-size: 1rem;
-                        margin-top: 10px;
-                        transition: background 0.2s;
-                    }
-                    .btn:hover { background: #00cc66; }
-                </style>
-            </head>
-            <body>
-                <h1>🤖 Multi-Agent Research Assistant</h1>
-                <p>An autonomous AI pipeline that researches, summarizes, critiques, and reports.</p>
-                <div class="pipeline">
-                    Search → Summarize → Critic → Report
-                </div>
-                <div class="badges">
-                    <span class="badge">⚡ Groq LLM</span>
-                    <span class="badge">🦙 Llama 3</span>
-                    <span class="badge">🔗 LangGraph</span>
-                    <span class="badge">🚀 FastAPI</span>
-                </div>
-                <a class="btn" href="/docs">Launch API →</a>
-            </body>
-        </html>
-        """
-
-    @app.get("/health")
-    def health():
-        return {"status": "ok"}
-
-    @app.post("/research", response_model=ResearchResponse)
-    def research(req: ResearchRequest):
-        if not os.environ.get("GROQ_API_KEY"):
+    @app.get("/research/stream")
+    def research_stream(query: str):
+        if not os.environ.get("GOOGLE_API_KEY"):
             raise HTTPException(
                 status_code=503,
-                detail="GROQ_API_KEY is not configured on the server.",
+                detail="GOOGLE_API_KEY is not configured on the server.",
             )
-        q = req.query.strip()
+        q = query.strip()
         if not q:
             raise HTTPException(status_code=400, detail="Query must not be empty.")
-        out = run_research(q)
-        return ResearchResponse(
-            query=q,
-            report=out.get("final_report") or "",
-            errors=list(out.get("errors") or []),
-            current_agent=str(out.get("current_agent") or ""),
-        )
+
+        async def event_generator():
+            graph = get_compiled_graph()
+            state = initial_state(q)
+            for chunk in graph.stream(state, stream_mode="updates"):
+                yield f"data: {json.dumps(chunk)}\n\n"
+        
+        return StreamingResponse(event_generator(), media_type="text/event-stream")
 
     return app
+
 
 app = create_app()

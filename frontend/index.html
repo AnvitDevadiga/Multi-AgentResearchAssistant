@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canopy — Multi-Agent Research Assistant</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="bg-overlay"></div>
+    
+    <div class="container">
+        <header class="hero">
+            <div class="hero-content">
+                <span class="eyebrow">Multi-Agent Research System</span>
+                <h1>Canopy Research</h1>
+                <p>Four autonomous agents scan, harvest, and cross-check sources — then hand back a synthesized brief with cited evidence.</p>
+            </div>
+        </header>
+
+        <main>
+            <section class="search-section card">
+                <div class="section-label">Research Query</div>
+                <form id="search-form" class="search-form">
+                    <input type="text" id="query-input" placeholder="e.g. Impact of soil mycorrhizae on rainforest carbon capture" required autocomplete="off">
+                    <button type="submit" id="search-btn">
+                        <span>Search</span>
+                        <div class="spinner" id="search-spinner"></div>
+                    </button>
+                </form>
+            </section>
+
+            <section id="status-section" class="status-section hidden card">
+                <div class="status-header">
+                    <div class="status-icon loading-pulse"></div>
+                    <h3 id="status-text">Initializing scan…</h3>
+                </div>
+                <ul id="status-stages" class="status-stages">
+                    <li class="stage pending" id="stage-0">Agent 1 — exploring the canopy for relevant sources</li>
+                    <li class="stage pending" id="stage-1">Agent 2 — harvesting raw data</li>
+                    <li class="stage pending" id="stage-2">Agent 3 — filtering anomalies and duplicates</li>
+                    <li class="stage pending" id="stage-3">Agent 4 — synthesizing the final brief</li>
+                </ul>
+            </section>
+
+            <div id="results-container" class="results-container hidden">
+                <div class="main-column">
+                    <section class="sources-section card" id="sources-card">
+                        <div class="section-label">Indexed Sources</div>
+                        <div id="sources-list" class="sources-list"></div>
+                    </section>
+
+                    <section class="overview-section card" id="overview-card">
+                        <div class="section-label">Overview</div>
+                        <div id="overview-content" class="overview-content markdown-body"></div>
+                        
+                        <div class="section-label mt-4">Key Findings</div>
+                        <ul id="key-findings-list" class="key-findings-list"></ul>
+                    </section>
+                </div>
+
+                <div class="hud-column">
+                    <section class="hud-section card">
+                        <div class="section-label">System HUD</div>
+                        <div class="metric-box">
+                            <div class="metric-label">Confidence</div>
+                            <div class="metric-value" id="confidence-value">--</div>
+                        </div>
+
+                        <div id="anomalies-container" class="anomalies-container mt-4">
+                            <!-- Anomalies will be injected here -->
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+    </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

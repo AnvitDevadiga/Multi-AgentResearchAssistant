@@ -19,6 +19,29 @@ def _extract_overview(report: str) -> str:
     return paragraphs[0][:600] if paragraphs else report[:600]
 
 
+def _extract_key_findings(report: str) -> list[str]:
+    if not report.strip():
+        return []
+    match = re.search(
+        r"(?is)##\s*key\s*findings\s*\n+(.*?)(?=\n##\s|\Z)",
+        report,
+    )
+    if not match:
+        return []
+    
+    lines = match.group(1).strip().split('\n')
+    findings = []
+    for line in lines:
+        line = line.strip()
+        if line.startswith('-') or line.startswith('*'):
+            # Remove markdown list prefixes
+            findings.append(re.sub(r'^[-*]\s*', '', line))
+        elif re.match(r'^\d+\.\s*', line):
+            # Remove numbered list prefixes
+            findings.append(re.sub(r'^\d+\.\s*', '', line))
+    return findings
+
+
 def _overall_confidence(assessments: list[dict[str, Any]], contradictions: list[str]) -> str:
     if not assessments:
         return "LOW" if contradictions else "MEDIUM"
@@ -44,14 +67,7 @@ def structured_from_state(state: dict[str, Any]) -> dict[str, Any]:
     assessments = list(critic.get("assessments") or [])
     report = str(state.get("final_report") or "")
 
-    key_findings: list[str] = []
-    for summary in summaries:
-        for fact in summary.get("key_facts") or []:
-            text = str(fact).strip()
-            if text and text not in key_findings:
-                key_findings.append(text)
-        if len(key_findings) >= 12:
-            break
+    key_findings = _extract_key_findings(report)
 
     sources = [
         {

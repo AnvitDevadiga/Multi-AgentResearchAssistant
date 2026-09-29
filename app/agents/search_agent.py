@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from html import unescape
 from urllib.parse import urlparse
 
@@ -16,7 +17,7 @@ USER_AGENT = (
     "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 )
 MAX_FETCH_BYTES = 400_000
-TEXT_PREVIEW_CHARS = 12_000
+TEXT_PREVIEW_CHARS = 8_000
 
 
 def _strip_html(html: str) -> str:
@@ -28,7 +29,7 @@ def _strip_html(html: str) -> str:
     return text
 
 
-def _fetch_page_text(url: str, timeout: float = 12.0) -> str:
+def _fetch_page_text(url: str, timeout: float = 10.0) -> str:
     try:
         with httpx.Client(
             follow_redirects=True,
@@ -143,24 +144,44 @@ def _run_search(query: str, max_results: int = 5) -> list[SearchHit]:
         except Exception:
             raw = []
 
-    hits: list[SearchHit] = []
+    # Filter valid URLs first
+    valid = []
     for r in raw:
         href = (r.get("href") or "").strip()
         title = (r.get("title") or "").strip()
         body = (r.get("body") or "").strip()
         if not href or not urlparse(href).scheme.startswith("http"):
             continue
-        fetched = _fetch_page_text(href)
-        raw_content = fetched if fetched else body
+        valid.append({"href": href, "title": title, "body": body})
+        if len(valid) >= max_results:
+            break
+
+    if not valid:
+        return []
+
+    # Fetch all page contents concurrently
+    fetched_contents: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=min(len(valid), 5)) as pool:
+        future_to_url = {pool.submit(_fetch_page_text, v["href"]): v["href"] for v in valid}
+        for future in as_completed(future_to_url):
+            url = future_to_url[future]
+            try:
+                fetched_contents[url] = future.result()
+            except Exception:
+                fetched_contents[url] = ""
+
+    hits: list[SearchHit] = []
+    for v in valid:
+        href = v["href"]
+        fetched = fetched_contents.get(href, "")
+        raw_content = fetched if fetched else v["body"]
         hit: SearchHit = {
             "url": href,
-            "title": title or href,
-            "snippet": body,
-            "raw_content": raw_content if raw_content else body,
+            "title": v["title"] or href,
+            "snippet": v["body"],
+            "raw_content": raw_content if raw_content else v["body"],
         }
         hits.append(hit)
-        if len(hits) >= max_results:
-            break
     return hits
 
 

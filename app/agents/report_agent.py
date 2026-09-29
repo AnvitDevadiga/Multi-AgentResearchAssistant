@@ -17,13 +17,7 @@ def _minimal_report(state: ResearchState) -> str:
         f"Research query: **{q}**",
         "",
         "## Key Findings",
-        "_No summarized sources available._",
-        "",
-        "## Contradictions Found",
-        "_No critic output._",
-        "",
-        "## Sources",
-        "_None._",
+        "- _No summarized sources available._",
     ]
     return "\n".join(lines)
 
@@ -41,10 +35,13 @@ def report_node(state: ResearchState) -> dict:
         llm = get_chat_model()
         sys = SystemMessage(
             content=(
-                "You write clear research reports in Markdown. Required sections with these "
-                "exact headings (use ##): Overview, Key Findings, Contradictions Found, Sources. "
-                "Under Sources, list each URL as a bullet with title. "
-                "Integrate the summaries and critic JSON provided. Be concise."
+                "You are an expert researcher and master communicator. Your goal is to write a highly detailed, expansive, yet incredibly simple and easy-to-understand research report, exactly like Perplexity.ai does for a broad consumer audience. "
+                "The tone must be engaging and deeply informative, but instantly accessible to non-experts. Avoid complex jargon. Break down complex topics into simple truths. "
+                "You MUST return a comprehensive 'Overview' section (2-3 paragraphs diving deeply into the topic) and a 'Key Findings' section with 4 to 6 highly distinct, descriptive bullet points. "
+                "You must never return an empty summary. "
+                "You MUST use inline citations (e.g., [1]). "
+                "You MUST completely exclude 'Contradictions Found' and 'Sources' from the main body text. "
+                "Required sections with these exact headings (use ##): Overview, Key Findings."
             )
         )
         bundle = {
